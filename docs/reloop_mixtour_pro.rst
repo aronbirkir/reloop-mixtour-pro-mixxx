@@ -163,10 +163,32 @@ Configure the eight effects under **Preferences > Effects > Quick Effect chain
 presets**: preset 1 is the deck's default filter, presets 2 - 9 are the Instant FX
 pads in order.
 
+Pitch Cue Mode
+^^^^^^^^^^^^^^
+
+============================  =================================================
+Control                       Function
+============================  =================================================
+Pad 1                         Reset to the original key.
+Pad 2 - 8                     Set the key to +1 .. +7 semitones.
+:hwlabel:`SHIFT` + Pad 1 - 8  Jump to :term:`hotcue` 1 - 8 (switch cue points).
+============================  =================================================
+
+Saved Loops Mode
+^^^^^^^^^^^^^^^^
+
+============================  ==========================================
+Control                       Function
+============================  ==========================================
+Pad (empty slot)              Save the current loop to the slot.
+Pad (saved slot)              Recall: jump to and enable the saved loop.
+:hwlabel:`SHIFT` + Pad 1 - 8  Clear the saved loop.
+============================  ==========================================
+
 Controls not included in this mapping
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  **Neural Mix buttons** (no Mixxx equivalent).
 -  :hwlabel:`SHIFT` + :hwlabel:`HEADPHONE CUE` (Crossfader FX, no Mixxx equivalent).
--  **Pitch Cue**, **Saved Loops** and **Neural Mix** pad modes (not yet implemented).
+-  **Neural Mix** pad mode (not yet implemented).
 

@@ -181,6 +181,7 @@ ReloopMixTourPro.startBlink = function() {
     self.blinkTimers.push(engine.beginTimer(self.MTP.BLINK_SLOW, function() {
         self.state.blinkSlow = !self.state.blinkSlow;
         self.renderAllTransportLEDs();
+        self.renderAllPads();                  // animates saved-loop "blink while playing"
     }));
     self.blinkTimers.push(engine.beginTimer(self.MTP.BLINK_FAST, function() {
         self.state.blinkFast = !self.state.blinkFast;
@@ -324,6 +325,8 @@ ReloopMixTourPro.inOutButton = function(_ch, _ctrl, value, _status, group) {
 ReloopMixTourPro.BEATLOOP_SIZES = [0.25, 0.5, 1, 2, 4, 8, 16, 32];
 // Bounce Loop (beatjump): 4 sizes per row; left column jumps back, right column forward.
 ReloopMixTourPro.BEATJUMP_SIZES = [4, 8, 16, 32];
+// Pitch Cue: semitone each pad sets (slot 0 = reset to original key). Tunable.
+ReloopMixTourPro.PITCH_SEMITONES = [0, 1, 2, 3, 4, 5, 6, 7];
 
 // Standard hues for mapping a Mixxx hotcue RGB color -> nearest controller color name.
 ReloopMixTourPro.PALETTE_RGB = {
@@ -371,10 +374,12 @@ ReloopMixTourPro.padAction = function(group, deckIndex, slot, value, shifted) {
     switch (ReloopMixTourPro.state.padMode[deckIndex]) {
         case 0: ReloopMixTourPro.padHotcue(group, slot, value, shifted); break;   // HotCue
         case 1: ReloopMixTourPro.padBeatjump(group, deckIndex, slot, value, shifted); break; // BounceLoop
+        case 2: ReloopMixTourPro.padPitchCue(group, slot, value, shifted); break; // PitchCue
         case 3: ReloopMixTourPro.padInstantFX(group, deckIndex, slot, value); break; // InstantFX
         case 4: ReloopMixTourPro.padBeatloop(group, slot, value); break;          // AutoLoop
         case 5: ReloopMixTourPro.padSampler(slot, value, shifted); break;         // Sampler
-        default: break; // 2 PitchCue / 6 SavedLoops / 7 NeuralMix (stubs)
+        case 6: ReloopMixTourPro.padSavedLoop(group, slot, value, shifted); break; // SavedLoops
+        default: break; // 7 NeuralMix (stub)
     }
 };
 
@@ -443,6 +448,31 @@ ReloopMixTourPro.padSampler = function(slot, value, shifted) {
     else { engine.setValue(sg, "LoadSelectedTrack", 1); }
 };
 
+// Pitch Cue: set the musical key (pitch in semitones); pad 1 resets to original.
+// Shift + pad jumps to hot cue 1-8 (switch between cue points).
+ReloopMixTourPro.padPitchCue = function(group, slot, value, shifted) {
+    if (value === 0) { return; }
+    if (shifted) {
+        engine.setValue(group, "hotcue_" + (slot + 1) + "_activate", 1);
+    } else {
+        engine.setValue(group, "pitch", ReloopMixTourPro.PITCH_SEMITONES[slot]);
+    }
+};
+
+// Saved Loops: a bank of 8 hot loops (loop-type hotcues). Pad saves the current loop to
+// an empty slot, or recalls (jumps to + enables) a saved one. Shift + pad clears the slot.
+ReloopMixTourPro.padSavedLoop = function(group, slot, value, shifted) {
+    if (value === 0) { return; }
+    var n = slot + 1;
+    if (shifted) {
+        engine.setValue(group, "hotcue_" + n + "_clear", 1);
+    } else if (engine.getValue(group, "hotcue_" + n + "_status") > 0) {
+        engine.setValue(group, "hotcue_" + n + "_activate", 1);   // recall saved loop
+    } else {
+        engine.setValue(group, "hotcue_" + n + "_setloop", 1);    // save current loop
+    }
+};
+
 // Color for one logical slot (0-7) of a deck under its current pad mode.
 ReloopMixTourPro.padColorForSlot = function(deckIndex, slot) {
     var g = ReloopMixTourPro.groupForDeck(deckIndex);
@@ -465,9 +495,18 @@ ReloopMixTourPro.padColorForSlot = function(deckIndex, slot) {
         if (engine.getValue(sg, "track_loaded") <= 0) { return { color: "off", bright: false }; }
         return { color: "pink", bright: engine.getValue(sg, "play") > 0 };
     }
-    if (mode === 2) { return { color: (slot === 0 ? "white" : "red"), bright: (slot === 0) }; } // PitchCue (stub)
+    if (mode === 2) {                                   // PitchCue: pad 0 = reset (white), rest red
+        if (slot === 0) { return { color: "white", bright: true }; }
+        var cur = Math.round(engine.getValue(g, "pitch"));
+        return { color: "red", bright: (cur === ReloopMixTourPro.PITCH_SEMITONES[slot]) };
+    }
     if (mode === 3) { return { color: "green", bright: ReloopMixTourPro.state.instantFx[deckIndex] === slot }; } // InstantFX
-    if (mode === 6) { return { color: "blue", bright: false }; }    // SavedLoops (stub)
+    if (mode === 6) {                                   // SavedLoops: ambient if empty, bright if saved, blink while active
+        var hn = slot + 1;
+        if (engine.getValue(g, "hotcue_" + hn + "_status") <= 0) { return { color: "blue", bright: false }; }
+        if (engine.getValue(g, "hotcue_" + hn + "_enabled") > 0) { return { color: "blue", bright: ReloopMixTourPro.state.blinkSlow }; }
+        return { color: "blue", bright: true };
+    }
     if (mode === 7) { return { color: (slot < 4 ? "yellow" : "white"), bright: (slot < 4) }; } // NeuralMix (stub)
     return { color: "off", bright: false };
 };
@@ -531,8 +570,10 @@ ReloopMixTourPro.connectPadLEDs = function() {
         for (var n = 1; n <= 8; n++) {
             engine.makeConnection(g, "hotcue_" + n + "_status", rerender);
             engine.makeConnection(g, "hotcue_" + n + "_color", rerender);
+            engine.makeConnection(g, "hotcue_" + n + "_enabled", rerender); // saved-loop active state
         }
         engine.makeConnection(g, "loop_enabled", rerender);
+        engine.makeConnection(g, "pitch", rerender);                       // Pitch Cue active pad
         for (var bi = 0; bi < self.BEATLOOP_SIZES.length; bi++) {
             engine.makeConnection(g, "beatloop_" + self.BEATLOOP_SIZES[bi] + "_enabled", rerender);
         }

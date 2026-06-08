@@ -84,7 +84,9 @@ no other DJ app required).
 | **Bounce Loop** | beatjump: left col **back** (orange), right col **fwd** (green), 4/8/16/32 | invert direction |
 | **Sampler** | load / play sample (pink, bright while playing) | stop → eject |
 | **Instant FX** | hold a pad = Quick Effect preset #2–#9 while held (configure the list order — see setup) | — |
-| *Pitch Cue / Saved Loops / Neural Mix* | *not yet implemented* | |
+| **Pitch Cue** | pad 1 resets key; pads 2–8 set +1…+7 semitones | jump to hot cue 1–8 |
+| **Saved Loops** | save current loop to a slot / recall a saved loop | clear the slot |
+| *Neural Mix* | *not yet implemented* | |
 
 ### FX section
 
