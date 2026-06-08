@@ -35,8 +35,8 @@ no other DJ app required).
 1. Copy both files into your Mixxx controllers folder:
 
    ```
-   ReloopMixTourPro.midi.xml
-   ReloopMixTourPro-script.js
+   Reloop-Mixtour-Pro.midi.xml
+   Reloop-Mixtour-Pro.scripts.js
    ```
 
    - **macOS (App Store / sandboxed):**
